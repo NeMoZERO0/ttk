@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Golos Text", ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
+  --color-plaster: #EEF0F2;
+  --color-ink: #1C2430;
+  --color-ink-soft: #5B6675;
+  --color-line: #D3D9E0;
+  --color-corridor: #E3E7EC;
+  --color-signal: #FFC627;
+  --color-signal-deep: #E0A800;
+  --color-alert: #B4232A;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background: var(--color-plaster);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-signal-deep);
+  outline-offset: 2px;
+}
+
+/* Бегущие «шаги» по линии маршрута */
+@keyframes route-march { from { stroke-dashoffset: 0; } to { stroke-dashoffset: var(--dash, -14); } }
+.route-dash { animation: route-march 0.9s linear infinite; }
+
+/* Пульс точки назначения */
+@keyframes dest-pulse {
+  0% { transform: translate(-50%, -50%) scale(.6); opacity: .7; }
+  100% { transform: translate(-50%, -50%) scale(1.9); opacity: 0; }
+}
+.dest-pulse { animation: dest-pulse 1.6s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-dash, .dest-pulse { animation: none; }
+}

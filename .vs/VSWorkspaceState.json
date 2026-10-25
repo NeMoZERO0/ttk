@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\alembic",
+    "\\app",
+    "\\app\\routers",
+    "\\app\\services",
+    "\\tests"
+  ],
+  "SelectedNode": "\\alembic\\env.py",
+  "PreviewInSolutionExplorer": false
+}

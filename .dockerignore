@@ -1,0 +1,12 @@
+.venv
+env
+.git
+.vs
+.vscode
+__pycache__
+*.pyc
+frontend
+map
+space-map
+tests
+.env

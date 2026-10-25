@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Карта Пространства — Интерактивная навигация внутри зданий</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(255, 255, 255, 0.12);
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --text-sub: #6b7280;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.35);
+      --accent-green: #10b981;
+      --accent-purple: #8b5cf6;
+      --accent-amber: #f59e0b;
+      --header-h: 64px;
+      --footer-h: 70px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* TOP PROGRESS BAR */
+    .progress-bar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 100;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      width: 14.28%;
+      transition: width 0.35s ease;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* TOP NAVBAR */
+    header {
+      height: var(--header-h);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .slide-counter {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* SLIDES WRAPPER */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 3rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      min-height: calc(100vh - var(--header-h) - var(--footer-h));
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .slide.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* TYPOGRAPHY */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    .badge-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-purple { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .action-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.25rem;
+      color: #ffffff;
+    }
+
+    .lead-text {
+      font-size: 1.15rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    /* 2-COLUMN LAYOUT */
+    .grid-split {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 3rem;
+      align-items: center;
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+    .info-item:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateX(4px);
+    }
+
+    .item-icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .item-content h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    .item-content p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* SCREENSHOT PREVIEW BOX */
+    .screenshot-card {
+      position: relative;
+      background: #000;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      overflow: hidden;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      cursor: zoom-in;
+      group: hover;
+    }
+
+    .screenshot-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    .screenshot-card:hover img {
+      transform: scale(1.02);
+    }
+
+    .screenshot-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 0.85rem;
+    }
+
+    .zoom-hint {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #93c5fd;
+      font-weight: 500;
+    }
+
+    /* SLIDE 1: HERO */
+    .hero-container {
+      text-align: center;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    .hero-container .action-title {
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #ffffff 40%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+      text-align: left;
+    }
+    .hero-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+    .hero-card:nth-child(2)::before { background: var(--accent-green); }
+    .hero-card:nth-child(3)::before { background: var(--accent-purple); }
+    .hero-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #fff;
+    }
+    .hero-card p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* SLIDE 6: TECH STACK GRID */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+    .tech-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.4rem;
+      transition: all 0.2s;
+    }
+    .tech-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-3px);
+    }
+    .tech-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #60a5fa;
+      margin-bottom: 0.4rem;
+    }
+    .tech-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .tech-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* SLIDE 7: VALUE CARDS */
+    .value-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.75rem;
+      margin-top: 2rem;
+    }
+    .value-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .value-role {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .value-metric {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #34d399;
+      line-height: 1;
+      margin: 0.5rem 0;
+    }
+    .value-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .value-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .value-list li::before {
+      content: "✓";
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    /* FOOTER CONTROLS */
+    footer {
+      height: var(--footer-h);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--card-border);
+      background: rgba(9, 13, 22, 0.9);
+      position: sticky;
+      bottom: 0;
+      z-index: 90;
+    }
+
+    .nav-hints {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-sub);
+      font-size: 0.82rem;
+    }
+    .kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--card-border);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .slide-dots {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .dot.active {
+      width: 28px;
+      border-radius: 9999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .nav-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .btn-nav {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .btn-nav:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .btn-nav.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-nav.primary:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    /* LIGHTBOX MODAL */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      cursor: zoom-out;
+    }
+    .lightbox.open {
+      display: flex;
+    }
+    .lightbox img {
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 1.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-split {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      .hero-cards, .tech-grid, .value-grid {
+        grid-template-columns: 1fr;
+      }
+      .action-title {
+        font-size: 1.75rem;
+      }
+      .hero-container .action-title {
+        font-size: 2.2rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP PROGRESS BAR -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge">К</div>
+      <span>Карта Пространства</span>
+    </div>
+    <div class="header-actions">
+      <span class="slide-counter" id="slideCounter">1 / 7</span>
+      <button class="btn-icon" id="fullscreenBtn" title="Полноэкранный режим (F)">⛶</button>
+    </div>
+  </header>
+
+  <!-- MAIN SLIDES -->
+  <main>
+
+    <!-- СЛАЙД 1: ГЛАВНАЯ ИДЕЯ -->
+    <section class="slide active" id="slide-1">
+      <div class="hero-container">
+        <span class="badge badge-blue">Концепция и миссия решения</span>
+        <h1 class="action-title">Понятная навигация внутри зданий без установки приложений</h1>
+        <p class="lead-text">
+          Посетитель наводит камеру смартфона на QR-код и за 1 секунду открывает интерактивную карту этажа прямо в браузере. Без очередей к информационным стойкам и потерянных минут.
+        </p>
+
+        <div class="hero-cards">
+          <div class="hero-card">
+            <h3>Быстрый старт</h3>
+            <p>Работает на любом смартфоне или компьютере без скачивания из App Store или Google Play.</p>
+          </div>
+          <div class="hero-card">
+            <h3>Точный маршрут</h3>
+            <p>Пошаговое построение пути от входа до нужного кабинета или стенда с расчетом времени в пути.</p>
+          </div>
+          <div class="hero-card">
+            <h3>Простой конструктор</h3>
+            <p>Организатор создает и правит схему помещения за 15 минут в интуитивном визуальном редакторе.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 2: ПАНЕЛЬ ОРГАНИЗАТОРА (СКРИНШОТ 3) -->
+    <section class="slide" id="slide-2">
+      <div class="grid-split">
+        <div>
+          <span class="badge badge-purple">Центр управления</span>
+          <h2 class="action-title">Панель организатора: все мероприятия и площадки под рукой</h2>
+          <p class="lead-text">
+            Единое окно для управления событиями: быстрый запуск новых карт и переключение между ними.
+          </p>
+
+          <div class="info-list">
+            <div class="info-item">
+              <div class="item-icon">📋</div>
+              <div class="item-content">
+                <h4>Наглядные карточки мероприятий</h4>
+                <p>Разделение на статусы («Черновик» для настройки команды или «Опубликована» для доступа гостей).</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">📍</div>
+              <div class="item-content">
+                <h4>Привязка к физическому адресу</h4>
+                <p>К каждому событию прикреплен точный адрес площадки для удобной ориентации гостей на входе.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">🔒</div>
+              <div class="item-content">
+                <h4>Быстрый безопасный вход</h4>
+                <p>Кнопка «Я организатор» с мгновенной проверкой пароля защищает карты от случайных правок.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="screenshot-card" onclick="openLightbox('presentation_assets/screenshot3_dashboard.png')">
+            <img src="presentation_assets/screenshot3_dashboard.png" alt="Панель организатора со списком мероприятий">
+            <div class="screenshot-overlay">
+              <span>Панель организатора: список карточек и кнопка создания</span>
+              <span class="zoom-hint">🔍 Увеличить</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 3: КОНСТРУКТОР ПЛАНА (СКРИНШОТ 1) -->
+    <section class="slide" id="slide-3">
+      <div class="grid-split">
+        <div>
+          <span class="badge badge-blue">Визуальный редактор</span>
+          <h2 class="action-title">Конструктор схемы: просто, как конструктор Lego</h2>
+          <p class="lead-text">
+            Создание и редактирование помещений мышкой без необходимости учить тяжелые инженерные программы.
+          </p>
+
+          <div class="info-list">
+            <div class="info-item">
+              <div class="item-icon">📐</div>
+              <div class="item-content">
+                <h4>Координатная сетка с шагом 1 метр</h4>
+                <p>Магнитная привязка стен и углов гарантирует идеальную геометрию без кривых линий.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">📦</div>
+              <div class="item-content">
+                <h4>Комнаты по площади (м²) и деформация углов</h4>
+                <p>Создание прямоугольника нужного метража и свободное добавление вершин для сложных форм.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">🚪</div>
+              <div class="item-content">
+                <h4>Архитектурные двери и проемы</h4>
+                <p>Выбор ширины (от 0.8 до 2.0 м), поворот на 90° и настройка открывания створок.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="screenshot-card" onclick="openLightbox('presentation_assets/screenshot1_editor.png')">
+            <img src="presentation_assets/screenshot1_editor.png" alt="Конструктор плана этажа с координатной сеткой">
+            <div class="screenshot-overlay">
+              <span>Интерфейс конструктора: сетка, привязка, добавление комнат и дверей</span>
+              <span class="zoom-hint">🔍 Увеличить</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 4: НАВИГАЦИЯ ГОСТЯ (СКРИНШОТ 4) -->
+    <section class="slide" id="slide-4">
+      <div class="grid-split">
+        <div>
+          <span class="badge badge-green">Опыт посетителя</span>
+          <h2 class="action-title">Навигация для гостя: маршрут за 1 клик</h2>
+          <p class="lead-text">
+            Гость выбирает начальную и конечную точку — сервис мгновенно рисует маршрут по коридорам.
+          </p>
+
+          <div class="info-list">
+            <div class="info-item">
+              <div class="item-icon">🚶</div>
+              <div class="item-content">
+                <h4>Четкая линия пути и расчет времени</h4>
+                <p>Например, «Главный вход → Лифт»: система пишет «1 мин пешком» и показывает траекторию движения.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">🔍</div>
+              <div class="item-content">
+                <h4>Интерактивные карточки зон</h4>
+                <p>Клик по стенду или кабинету открывает название, описание и кнопку «Проложить маршрут».</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">📱</div>
+              <div class="item-content">
+                <h4>Плавный зум и перемещение</h4>
+                <p>Легкое управление жестами на экране смартфона или колесиком мыши на компьютере.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="screenshot-card" onclick="openLightbox('presentation_assets/screenshot4_route.png')">
+            <img src="presentation_assets/screenshot4_route.png" alt="Экран навигации посетителя с построенным маршрутом">
+            <div class="screenshot-overlay">
+              <span>Экран гостя: построенный путь «Главный вход → Лифт», 1 мин пешком</span>
+              <span class="zoom-hint">🔍 Увеличить</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 5: АНАЛИТИКА И СТАТИСТИКА (СКРИНШОТ 2) -->
+    <section class="slide" id="slide-5">
+      <div class="grid-split">
+        <div>
+          <span class="badge badge-amber">Аналитика</span>
+          <h2 class="action-title">Реальная статистика: прозрачный интерес гостей</h2>
+          <p class="lead-text">
+            Организатор и спонсоры видят объективные данные о посещаемости каждого стенда и зоны.
+          </p>
+
+          <div class="info-list">
+            <div class="info-item">
+              <div class="item-icon">👁️</div>
+              <div class="item-content">
+                <h4>Счетчики просмотров и переходов</h4>
+                <p>Фиксация количества открытий карты, кликов по точкам и обращений к поиску пути.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">📊</div>
+              <div class="item-content">
+                <h4>График динамики по дням</h4>
+                <p>Наглядный 14-дневный график показывает часы пиковой нагрузки и активность посетителей.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="item-icon">🎯</div>
+              <div class="item-content">
+                <h4>Тепловая карта интереса</h4>
+                <p>Понимание, какие локации привлекают больше всего внимания, а какие требуют лучшей рекламы.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="screenshot-card" onclick="openLightbox('presentation_assets/screenshot2_stats.png')">
+            <img src="presentation_assets/screenshot2_stats.png" alt="Экран аналитики со счетчиками и графиком">
+            <div class="screenshot-overlay">
+              <span>Экран статистики: просмотры, клики, построенные маршруты и график за 14 дней</span>
+              <span class="zoom-hint">🔍 Увеличить</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 6: ТЕХНОЛОГИЧЕСКИЙ СТЕК -->
+    <section class="slide" id="slide-6">
+      <div>
+        <span class="badge badge-purple">Инженерная база</span>
+        <h2 class="action-title">Технологический стек простыми словами</h2>
+        <p class="lead-text">
+          Современные и проверенные технологии, обеспечивающие высокую скорость и надежность работы без лишней сложности.
+        </p>
+
+        <div class="tech-grid">
+          <div class="tech-card">
+            <div class="tech-tag">Фронтенд</div>
+            <div class="tech-name">React 19 + Vite</div>
+            <div class="tech-desc">Моментальный запуск интерфейса за доли секунды, плавная анимация и работа без зависаний даже на бюджетных телефонах.</div>
+          </div>
+
+          <div class="tech-card">
+            <div class="tech-tag">Отрисовка карты</div>
+            <div class="tech-name">Векторный SVG</div>
+            <div class="tech-desc">Четкие линии при любом приближении. Векторный файл карты весит в десятки раз меньше тяжелых растровых картинок.</div>
+          </div>
+
+          <div class="tech-card">
+            <div class="tech-tag">Сервер</div>
+            <div class="tech-name">Python (FastAPI)</div>
+            <div class="tech-desc">Современный асинхронный сервер. Высокая скорость построения маршрутов и стабильная обработка запросов гостей.</div>
+          </div>
+
+          <div class="tech-card">
+            <div class="tech-tag">База данных</div>
+            <div class="tech-name">PostgreSQL</div>
+            <div class="tech-desc">Надежное промышленное хранилище для мероприятий, планов этажей, маршрутов и статистики посещений.</div>
+          </div>
+
+          <div class="tech-card">
+            <div class="tech-tag">Отказоустойчивость</div>
+            <div class="tech-name">Резервный SQLite</div>
+            <div class="tech-desc">Автоматическое плавное переключение на встроенную локальную базу при работе на автономных стендах без Docker.</div>
+          </div>
+
+          <div class="tech-card">
+            <div class="tech-tag">Развертывание</div>
+            <div class="tech-name">Docker</div>
+            <div class="tech-desc">Упаковка всего приложения в изолированные контейнеры. Запуск на любом сервере или ноутбуке одной командой.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЛАЙД 7: ИТОГОВАЯ ЦЕННОСТЬ -->
+    <section class="slide" id="slide-7">
+      <div>
+        <span class="badge badge-green">Эффект от внедрения</span>
+        <h2 class="action-title">Главный результат: выигрывают все</h2>
+        <p class="lead-text">
+          Проект решает проблемы навигации комплексно — и для тех, кто организует пространство, и для тех, кто в него приходит.
+        </p>
+
+        <div class="value-grid">
+          <div class="value-card">
+            <div class="value-role">
+              <span>👔</span> Для организатора
+            </div>
+            <div class="value-metric">15 минут</div>
+            <ul class="value-list">
+              <li>План площадки готов без найма дизайнеров и чертежников.</li>
+              <li>Мгновенные правки на ходу: переставили стол — карта сразу обновилась.</li>
+              <li>Не нужно печатать тысячи бумажных буклетов, которые сразу выбрасывают.</li>
+            </ul>
+          </div>
+
+          <div class="value-card">
+            <div class="value-role">
+              <span>🚶</span> Для посетителя
+            </div>
+            <div class="value-metric">0 секунд</div>
+            <ul class="value-list">
+              <li>Не требуется скачивать приложения или проходить регистрацию.</li>
+              <li>Понятная стрелка маршрута прямо от входа к нужной цели.</li>
+              <li>Точное знание времени в пути — никаких опозданий на лекции и встречи.</li>
+            </ul>
+          </div>
+
+          <div class="value-card">
+            <div class="value-role">
+              <span>🏢</span> Для площадки и спонсоров
+            </div>
+            <div class="value-metric">100% данных</div>
+            <ul class="value-list">
+              <li>Честная статистика просмотров и кликов по каждому партнеру.</li>
+              <li>Снижение нагрузки на администраторов и службу безопасности.</li>
+              <li>Повышение статуса мероприятия за счет современного цифрового сервиса.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="nav-hints">
+      Управление: <span class="kbd">←</span> <span class="kbd">→</span> или <span class="kbd">Пробел</span>
+    </div>
+
+    <div class="slide-dots" id="dotsContainer"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-nav" id="prevBtn">← Назад</button>
+      <button class="btn-nav primary" id="nextBtn">Вперед →</button>
+    </div>
+  </footer>
+
+  <!-- LIGHTBOX MODAL -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightboxImg" src="" alt="Увеличенный скриншот">
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+
+    const progressBar = document.getElementById('progressBar');
+    const slideCounter = document.getElementById('slideCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const dotsContainer = document.getElementById('dotsContainer');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    // Create dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.className = `dot ${i === 0 ? 'active' : ''}`;
+      dot.title = `Слайд ${i + 1}`;
+      dot.onclick = () => goToSlide(i);
+      dotsContainer.appendChild(dot);
+    }
+    const dots = document.querySelectorAll('.dot');
+
+    function updateSlide() {
+      slides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === currentSlide);
+      });
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === currentSlide);
+      });
+
+      progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+      slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === totalSlides - 1;
+      nextBtn.textContent = currentSlide === totalSlides - 1 ? 'Завершить' : 'Вперед →';
+    }
+
+    function goToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlide = index;
+        updateSlide();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    prevBtn.addEventListener('click', prevSlide);
+    nextBtn.addEventListener('click', nextSlide);
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides - 1);
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      } else if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+
+    // Lightbox modal
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+
+    function openLightbox(src) {
+      lightboxImg.src = src;
+      lightbox.classList.add('open');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+    }
+
+    // Fullscreen toggle
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    updateSlide();
+  </script>
+</body>
+</html>
