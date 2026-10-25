@@ -30,7 +30,9 @@ docker compose up -d
 **Терминал 2 — бэкенд** (первая строка нужна только один раз):
 Создать .venv
 python -m venv .venv
+
 .venv\Scripts\Activate.ps1
+
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
